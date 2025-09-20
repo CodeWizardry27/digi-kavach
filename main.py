@@ -1,20 +1,16 @@
-# File: main.py (Corrected for Local Telegram Bot)
+# File: main.py (Corrected with Lifespan Manager)
 
 import os
 import pickle
 import re
 import telegram
-from telegram.constants import ParseMode # Correct import
+from telegram.constants import ParseMode
 from fastapi import FastAPI, Request
 from nltk.corpus import stopwords
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager # <-- 1. IMPORT THIS
 
-# --- 1. Initialization ---
-load_dotenv()
-app = FastAPI()
-
-# --- Load Models Locally ---
-# This is the correct way for local testing. It loads files from your folder.
+# --- Load Models and Preprocessing (remains the same) ---
 try:
     with open('vectorizer.pkl', 'rb') as f:
         tfidf_vectorizer = pickle.load(f)
@@ -22,14 +18,11 @@ try:
         model = pickle.load(f)
 except FileNotFoundError:
     print("Error: model.pkl or vectorizer.pkl not found.")
-    print("Please run train_model.py first to generate these files.")
     exit()
 
-# --- Telegram Bot Setup ---
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 bot = telegram.Bot(token=TOKEN)
 
-# --- Preprocessing Function (remains the same) ---
 stop_words = set(stopwords.words('english'))
 def preprocess_text(text):
     text = str(text)
@@ -38,7 +31,30 @@ def preprocess_text(text):
     words = [w for w in words if not w in stop_words]
     return " ".join(words)
 
-# --- 2. Webhook for the Telegram Bot ---
+# --- 2. Create the Lifespan Manager ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # This code runs on startup
+    print("Application startup...")
+    RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
+    if RENDER_EXTERNAL_URL:
+        webhook_url = f"{RENDER_EXTERNAL_URL}/telegram-hook"
+        response = await bot.set_webhook(url=webhook_url)
+        if response:
+            print(f"Webhook set to {webhook_url}")
+        else:
+            print("Failed to set webhook")
+    
+    yield # The application runs while the server is alive
+    
+    # This code runs on shutdown (optional)
+    print("Application shutdown...")
+
+
+# --- 3. Initialize FastAPI with the Lifespan ---
+app = FastAPI(lifespan=lifespan)
+
+# --- 4. Webhook for the Telegram Bot (remains the same) ---
 @app.post("/telegram-hook")
 async def telegram_hook(request: Request):
     data = await request.json()
@@ -57,29 +73,9 @@ async def telegram_hook(request: Request):
         else:
             reply_message = "✅ This message seems safe, but always be cautious."
             
-        # This block now uses the correctly imported ParseMode
-        try:
-           # The new, corrected line
-            await bot.send_message(chat_id=chat_id, text=reply_message, parse_mode=ParseMode.MARKDOWN)
-        except Exception as e:
-            print(f"--- ERROR SENDING MESSAGE: {e} ---")
+        await bot.send_message(chat_id=chat_id, text=reply_message, parse_mode=ParseMode.MARKDOWN)
 
     except KeyError:
-        # This handles cases where the update is not a standard text message
         return {"status": "ignored"}
     
     return {"status": "ok"}
-# Add this at the end of the # --- 1. Initialization --- section in main.py
-@app.on_evnt("startup")
-async def startup_event():
-    """Sets the webhook on application startup."""
-    RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
-    if RENDER_EXTERNAL_URL:
-        # The URL of your deployed application
-        webhook_url = f"{RENDER_EXTERNAL_URL}/telegram-hook"
-        # Set the webhook
-        response = bot.set_webhook(url=webhook_url)
-        if response:
-            print(f"Webhook set to {webhook_url}")
-        else:
-            print("Failed to set webhook")
