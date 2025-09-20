@@ -69,3 +69,17 @@ async def telegram_hook(request: Request):
         return {"status": "ignored"}
     
     return {"status": "ok"}
+# Add this at the end of the # --- 1. Initialization --- section in main.py
+@app.on_evnt("startup")
+async def startup_event():
+    """Sets the webhook on application startup."""
+    RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
+    if RENDER_EXTERNAL_URL:
+        # The URL of your deployed application
+        webhook_url = f"{RENDER_EXTERNAL_URL}/telegram-hook"
+        # Set the webhook
+        response = bot.set_webhook(url=webhook_url)
+        if response:
+            print(f"Webhook set to {webhook_url}")
+        else:
+            print("Failed to set webhook")
