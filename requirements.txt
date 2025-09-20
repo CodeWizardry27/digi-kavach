@@ -3,7 +3,7 @@ uvicorn
 python-multipart
 scikit-learn
 pandas
-nltk
+#nltk
 twilio
 python-dotenv
 python-telegram-bot

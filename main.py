@@ -6,7 +6,7 @@ import re
 import telegram
 from telegram.constants import ParseMode
 from fastapi import FastAPI, Request
-from nltk.corpus import stopwords
+#from nltk.corpus import stopwords
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager # <-- 1. IMPORT THIS
 
@@ -23,13 +23,12 @@ except FileNotFoundError:
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 bot = telegram.Bot(token=TOKEN)
 
-stop_words = set(stopwords.words('english'))
 def preprocess_text(text):
+    """Cleans text without removing stopwords."""
     text = str(text)
+    # This line just removes special characters and converts to lowercase
     text = re.sub('[^a-zA-Z0-9]', ' ', text).lower()
-    words = text.split()
-    words = [w for w in words if not w in stop_words]
-    return " ".join(words)
+    return text
 
 # --- 2. Create the Lifespan Manager ---
 @asynccontextmanager

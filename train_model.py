@@ -2,8 +2,8 @@
 
 import pandas as pd
 import re
-import nltk
-from nltk.corpus import stopwords
+#import nltk
+#from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB  # <-- 1. IMPORT THE NEW MODEL
@@ -20,14 +20,12 @@ except Exception as e:
     exit()
 
 # --- 2. Preprocessing ---
-stop_words = set(stopwords.words('english'))
-
 def preprocess_text(text):
+    """Cleans text without removing stopwords."""
     text = str(text)
+    # This line just removes special characters and converts to lowercase
     text = re.sub('[^a-zA-Z0-9]', ' ', text).lower()
-    words = text.split()
-    words = [w for w in words if not w in stop_words]
-    return " ".join(words)
+    return text
 
 df['message'] = df['message'].apply(preprocess_text)
 df = df.dropna()
