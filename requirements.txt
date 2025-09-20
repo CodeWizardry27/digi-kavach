@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+scikit-learn
+pandas
+nltk
+twilio
+python-dotenv
+python-telegram-bot
